@@ -22,6 +22,56 @@
  */
 
 const { NlpManager } = require('../../src');
+const corpus = require('./corpus-en.json');
+
+function addEntities(manager) {
+  manager.addNamedEntityText(
+    'hero',
+    'spiderman',
+    ['en'],
+    ['Spiderman', 'Spider-man']
+  );
+  manager.addNamedEntityText(
+    'hero',
+    'iron man',
+    ['en'],
+    ['iron man', 'iron-man']
+  );
+  manager.addNamedEntityText('hero', 'thor', ['en'], ['Thor']);
+  manager.addNamedEntityText(
+    'food',
+    'burguer',
+    ['en'],
+    ['Burguer', 'Hamburguer']
+  );
+  manager.addNamedEntityText('food', 'pizza', ['en'], ['pizza']);
+  manager.addNamedEntityText('food', 'pasta', ['en'], ['Pasta', 'spaghetti']);
+}
+
+function addFrJp(manager) {
+  manager.addLanguage(['fr', 'ja']);
+  manager.addDocument('fr', 'Bonjour', 'greet');
+  manager.addDocument('fr', 'bonne nuit', 'greet');
+  manager.addDocument('fr', 'Bonsoir', 'greet');
+  manager.addDocument('fr', "J'ai perdu mes clés", 'keys');
+  manager.addDocument('fr', 'Je ne trouve pas mes clés', 'keys');
+  manager.addDocument('fr', 'Je ne me souviens pas où sont mes clés', 'keys');
+  manager.addDocument('ja', 'おはようございます', 'greet');
+  manager.addDocument('ja', 'こんにちは', 'greet');
+  manager.addDocument('ja', 'おやすみ', 'greet');
+  manager.addDocument('ja', '私は私の鍵を紛失した', 'keys');
+  manager.addDocument('ja', '私は私の鍵がどこにあるのか覚えていない', 'keys');
+  manager.addDocument('ja', '私は私の鍵が見つからない', 'keys');
+}
+
+function addEn(manager) {
+  manager.addDocument('en', 'Hello', 'greet');
+  manager.addDocument('en', 'Good evening', 'greet');
+  manager.addDocument('en', 'Good morning', 'greet');
+  manager.addDocument('en', "I've lost my keys", 'keys');
+  manager.addDocument('en', "I don't find my keys", 'keys');
+  manager.addDocument('en', "I don't know where are my keys", 'keys');
+}
 
 describe('NLP Manager', () => {
   describe('constructor', () => {
@@ -161,71 +211,13 @@ describe('NLP Manager', () => {
         1
       );
     });
-    //   test('Should extract managed named entities', () => {
-    //     const manager = new NlpManager();
-    //     manager.addLanguage(['en', 'es']);
-    //     manager.addNamedEntityText(
-    //       'hero',
-    //       'spiderman',
-    //       ['en'],
-    //       ['Spiderman', 'Spider-man']
-    //     );
-    //     manager.addNamedEntityText(
-    //       'hero',
-    //       'iron man',
-    //       ['en'],
-    //       ['iron man', 'iron-man']
-    //     );
-    //     manager.addNamedEntityText('hero', 'thor', ['en'], ['Thor']);
-    //     manager.addNamedEntityText(
-    //       'food',
-    //       'burguer',
-    //       ['en'],
-    //       ['Burguer', 'Hamburguer']
-    //     );
-    //     manager.addNamedEntityText('food', 'pizza', ['en'], ['pizza']);
-    //     manager.addNamedEntityText(
-    //       'food',
-    //       'pasta',
-    //       ['en'],
-    //       ['Pasta', 'spaghetti']
-    //     );
-    //     manager.addDocument('en', 'I saw %hero%', 'sawhero');
-    //     expect(manager.slotManager.intents.sawhero).toBeDefined();
-    //     expect(manager.slotManager.intents.sawhero.hero).toBeDefined();
-    //   });
   });
 
   describe('Remove named entity text', () => {
     test('Should remove texts of named entity', () => {
       const manager = new NlpManager();
       manager.addLanguage(['en', 'es']);
-      manager.addNamedEntityText(
-        'hero',
-        'spiderman',
-        ['en'],
-        ['Spiderman', 'Spider-man']
-      );
-      manager.addNamedEntityText(
-        'hero',
-        'iron man',
-        ['en'],
-        ['iron man', 'iron-man']
-      );
-      manager.addNamedEntityText('hero', 'thor', ['en'], ['Thor']);
-      manager.addNamedEntityText(
-        'food',
-        'burguer',
-        ['en'],
-        ['Burguer', 'Hamburguer']
-      );
-      manager.addNamedEntityText('food', 'pizza', ['en'], ['pizza']);
-      manager.addNamedEntityText(
-        'food',
-        'pasta',
-        ['en'],
-        ['Pasta', 'spaghetti']
-      );
+      addEntities(manager);
       manager.removeNamedEntityText('hero', 'iron man', 'en', 'iron-man');
       const ironman = manager.nlp.getRulesByName('en', 'hero');
       expect(ironman.rules[1].texts).toEqual(['iron man']);
@@ -270,36 +262,27 @@ describe('NLP Manager', () => {
   describe('Classify', () => {
     test('Should classify an utterance without None feature', async () => {
       const manager = new NlpManager({ nlu: { useNoneFeature: false } });
-      manager.addLanguage(['fr', 'jp']);
-      manager.addDocument('fr', 'Bonjour', 'greet');
-      manager.addDocument('fr', 'bonne nuit', 'greet');
-      manager.addDocument('fr', 'Bonsoir', 'greet');
-      manager.addDocument('fr', "J'ai perdu mes clés", 'keys');
-      manager.addDocument('fr', 'Je ne trouve pas mes clés', 'keys');
-      manager.addDocument(
-        'fr',
-        'Je ne me souviens pas où sont mes clés',
-        'keys'
-      );
+      addFrJp(manager);
       await manager.train();
       const result = await manager.classify('fr', 'où sont mes clés');
       expect(result.classifications).toHaveLength(2);
       expect(result.intent).toEqual('keys');
       expect(result.score).toBeGreaterThan(0.7);
     });
+    test('Should classify using allow list', async () => {
+      const manager = new NlpManager({ nlu: { useNoneFeature: false } });
+      addFrJp(manager);
+      await manager.train();
+      const result = await manager.classify('fr', 'où sont mes clés', {
+        allowList: ['greet'],
+      });
+      expect(result.classifications).toHaveLength(2);
+      expect(result.intent).toEqual('keys');
+      expect(result.score).toBeGreaterThan(0.7);
+    });
     test('Should classify an utterance', async () => {
       const manager = new NlpManager();
-      manager.addLanguage(['fr', 'jp']);
-      manager.addDocument('fr', 'Bonjour', 'greet');
-      manager.addDocument('fr', 'bonne nuit', 'greet');
-      manager.addDocument('fr', 'Bonsoir', 'greet');
-      manager.addDocument('fr', "J'ai perdu mes clés", 'keys');
-      manager.addDocument('fr', 'Je ne trouve pas mes clés', 'keys');
-      manager.addDocument(
-        'fr',
-        'Je ne me souviens pas où sont mes clés',
-        'keys'
-      );
+      addFrJp(manager);
       await manager.train();
       const result = await manager.classify('fr', 'où sont mes clés');
       expect(result.classifications).toHaveLength(3);
@@ -308,27 +291,7 @@ describe('NLP Manager', () => {
     });
     test('Should return a empty classifications if there is not classifier for this language', async () => {
       const manager = new NlpManager();
-      manager.addLanguage(['fr', 'ja']);
-      manager.addDocument('fr', 'Bonjour', 'greet');
-      manager.addDocument('fr', 'bonne nuit', 'greet');
-      manager.addDocument('fr', 'Bonsoir', 'greet');
-      manager.addDocument('fr', "J'ai perdu mes clés", 'keys');
-      manager.addDocument('fr', 'Je ne trouve pas mes clés', 'keys');
-      manager.addDocument(
-        'fr',
-        'Je ne me souviens pas où sont mes clés',
-        'keys'
-      );
-      manager.addDocument('ja', 'おはようございます', 'greet');
-      manager.addDocument('ja', 'こんにちは', 'greet');
-      manager.addDocument('ja', 'おやすみ', 'greet');
-      manager.addDocument('ja', '私は私の鍵を紛失した', 'keys');
-      manager.addDocument(
-        'ja',
-        '私は私の鍵がどこにあるのか覚えていない',
-        'keys'
-      );
-      manager.addDocument('ja', '私は私の鍵が見つからない', 'keys');
+      addFrJp(manager);
       await manager.train();
       const result = await manager.process('en', 'where are my keys?');
       const expected = {
@@ -363,27 +326,7 @@ describe('NLP Manager', () => {
   describe('Train', () => {
     test('You can train only a language', async () => {
       const manager = new NlpManager({ nlu: { trainByDomain: true } });
-      manager.addLanguage(['fr', 'ja']);
-      manager.addDocument('fr', 'Bonjour', 'greet');
-      manager.addDocument('fr', 'bonne nuit', 'greet');
-      manager.addDocument('fr', 'Bonsoir', 'greet');
-      manager.addDocument('fr', "J'ai perdu mes clés", 'keys');
-      manager.addDocument('fr', 'Je ne trouve pas mes clés', 'keys');
-      manager.addDocument(
-        'fr',
-        'Je ne me souviens pas où sont mes clés',
-        'keys'
-      );
-      manager.addDocument('ja', 'おはようございます', 'greet');
-      manager.addDocument('ja', 'こんにちは', 'greet');
-      manager.addDocument('ja', 'おやすみ', 'greet');
-      manager.addDocument('ja', '私は私の鍵を紛失した', 'keys');
-      manager.addDocument(
-        'ja',
-        '私は私の鍵がどこにあるのか覚えていない',
-        'keys'
-      );
-      manager.addDocument('ja', '私は私の鍵が見つからない', 'keys');
+      addFrJp(manager);
       await manager.train('fr');
       let result = await manager.classify('où sont mes clés');
       expect(result.classifications).toHaveLength(3);
@@ -396,27 +339,7 @@ describe('NLP Manager', () => {
     });
     test('You can train a set of languages', async () => {
       const manager = new NlpManager();
-      manager.addLanguage(['fr', 'ja']);
-      manager.addDocument('fr', 'Bonjour', 'greet');
-      manager.addDocument('fr', 'bonne nuit', 'greet');
-      manager.addDocument('fr', 'Bonsoir', 'greet');
-      manager.addDocument('fr', "J'ai perdu mes clés", 'keys');
-      manager.addDocument('fr', 'Je ne trouve pas mes clés', 'keys');
-      manager.addDocument(
-        'fr',
-        'Je ne me souviens pas où sont mes clés',
-        'keys'
-      );
-      manager.addDocument('ja', 'おはようございます', 'greet');
-      manager.addDocument('ja', 'こんにちは', 'greet');
-      manager.addDocument('ja', 'おやすみ', 'greet');
-      manager.addDocument('ja', '私は私の鍵を紛失した', 'keys');
-      manager.addDocument(
-        'ja',
-        '私は私の鍵がどこにあるのか覚えていない',
-        'keys'
-      );
-      manager.addDocument('ja', '私は私の鍵が見つからない', 'keys');
+      addFrJp(manager);
       await manager.train(['fr', 'ja', 'es']);
       let result = await manager.classify('où sont mes clés');
       expect(result.classifications).toHaveLength(3);
@@ -433,32 +356,7 @@ describe('NLP Manager', () => {
     test('Should search for entities', async () => {
       const manager = new NlpManager({ ner: { builtins: [] } });
       manager.addLanguage(['en']);
-      manager.addNamedEntityText(
-        'hero',
-        'spiderman',
-        ['en'],
-        ['Spiderman', 'Spider-man']
-      );
-      manager.addNamedEntityText(
-        'hero',
-        'iron man',
-        ['en'],
-        ['iron man', 'iron-man']
-      );
-      manager.addNamedEntityText('hero', 'thor', ['en'], ['Thor']);
-      manager.addNamedEntityText(
-        'food',
-        'burguer',
-        ['en'],
-        ['Burguer', 'Hamburguer']
-      );
-      manager.addNamedEntityText('food', 'pizza', ['en'], ['pizza']);
-      manager.addNamedEntityText(
-        'food',
-        'pasta',
-        ['en'],
-        ['Pasta', 'spaghetti']
-      );
+      addEntities(manager);
       manager.addDocument('en', 'I saw %hero% eating %food%', 'sawhero');
       manager.addDocument(
         'en',
@@ -476,32 +374,7 @@ describe('NLP Manager', () => {
     test('Should search for entities if the language is specified', async () => {
       const manager = new NlpManager({ ner: { builtins: [] } });
       manager.addLanguage(['en']);
-      manager.addNamedEntityText(
-        'hero',
-        'spiderman',
-        ['en'],
-        ['Spiderman', 'Spider-man']
-      );
-      manager.addNamedEntityText(
-        'hero',
-        'iron man',
-        ['en'],
-        ['iron man', 'iron-man']
-      );
-      manager.addNamedEntityText('hero', 'thor', ['en'], ['Thor']);
-      manager.addNamedEntityText(
-        'food',
-        'burguer',
-        ['en'],
-        ['Burguer', 'Hamburguer']
-      );
-      manager.addNamedEntityText('food', 'pizza', ['en'], ['pizza']);
-      manager.addNamedEntityText(
-        'food',
-        'pasta',
-        ['en'],
-        ['Pasta', 'spaghetti']
-      );
+      addEntities(manager);
       manager.addDocument('en', 'I saw %hero% eating %food%', 'sawhero');
       manager.addDocument(
         'en',
@@ -520,32 +393,7 @@ describe('NLP Manager', () => {
     test('If the locale is not provided, then guess language', async () => {
       const manager = new NlpManager({ ner: { builtins: [] } });
       manager.addLanguage(['en']);
-      manager.addNamedEntityText(
-        'hero',
-        'spiderman',
-        ['en'],
-        ['Spiderman', 'Spider-man']
-      );
-      manager.addNamedEntityText(
-        'hero',
-        'iron man',
-        ['en'],
-        ['iron man', 'iron-man']
-      );
-      manager.addNamedEntityText('hero', 'thor', ['en'], ['Thor']);
-      manager.addNamedEntityText(
-        'food',
-        'burguer',
-        ['en'],
-        ['Burguer', 'Hamburguer']
-      );
-      manager.addNamedEntityText('food', 'pizza', ['en'], ['pizza']);
-      manager.addNamedEntityText(
-        'food',
-        'pasta',
-        ['en'],
-        ['Pasta', 'spaghetti']
-      );
+      addEntities(manager);
       manager.addDocument('en', 'I saw %hero% eating %food%', 'sawhero');
       manager.addDocument(
         'en',
@@ -566,12 +414,7 @@ describe('NLP Manager', () => {
     test('Should classify an utterance without None feature', async () => {
       const manager = new NlpManager({ nlu: { useNoneFeature: false } });
       manager.addLanguage(['en', 'ja']);
-      manager.addDocument('en', 'Hello', 'greet');
-      manager.addDocument('en', 'Good evening', 'greet');
-      manager.addDocument('en', 'Good morning', 'greet');
-      manager.addDocument('en', "I've lost my keys", 'keys');
-      manager.addDocument('en', "I don't find my keys", 'keys');
-      manager.addDocument('en', "I don't know where are my keys", 'keys');
+      addEn(manager);
       await manager.train();
       const result = await manager.process('Where are my keys');
       expect(result).toBeDefined();
@@ -586,12 +429,7 @@ describe('NLP Manager', () => {
     test('Should classify an utterance', async () => {
       const manager = new NlpManager();
       manager.addLanguage(['en', 'ja']);
-      manager.addDocument('en', 'Hello', 'greet');
-      manager.addDocument('en', 'Good evening', 'greet');
-      manager.addDocument('en', 'Good morning', 'greet');
-      manager.addDocument('en', "I've lost my keys", 'keys');
-      manager.addDocument('en', "I don't find my keys", 'keys');
-      manager.addDocument('en', "I don't know where are my keys", 'keys');
+      addEn(manager);
       await manager.train();
       const result = await manager.process('Where are my keys');
       expect(result).toBeDefined();
@@ -606,12 +444,7 @@ describe('NLP Manager', () => {
     test('Language can be specified', async () => {
       const manager = new NlpManager();
       manager.addLanguage(['en', 'ja']);
-      manager.addDocument('en', 'Hello', 'greet');
-      manager.addDocument('en', 'Good evening', 'greet');
-      manager.addDocument('en', 'Good morning', 'greet');
-      manager.addDocument('en', "I've lost my keys", 'keys');
-      manager.addDocument('en', "I don't find my keys", 'keys');
-      manager.addDocument('en', "I don't know where are my keys", 'keys');
+      addEn(manager);
       await manager.train();
       const result = await manager.process('en', 'where are my keys');
       expect(result).toBeDefined();
@@ -626,12 +459,7 @@ describe('NLP Manager', () => {
     test('If a language not in the manager is passed, then return None classification', async () => {
       const manager = new NlpManager();
       manager.addLanguage(['en', 'ja']);
-      manager.addDocument('en', 'Hello', 'greet');
-      manager.addDocument('en', 'Good evening', 'greet');
-      manager.addDocument('en', 'Good morning', 'greet');
-      manager.addDocument('en', "I've lost my keys", 'keys');
-      manager.addDocument('en', "I don't find my keys", 'keys');
-      manager.addDocument('en', "I don't know where are my keys", 'keys');
+      addEn(manager);
       await manager.train();
       const result = await manager.process('es', 'andestán mis llaves');
       expect(result).toBeDefined();
@@ -714,32 +542,7 @@ describe('NLP Manager', () => {
     test('Should search for entities', async () => {
       const manager = new NlpManager({ ner: { builtins: [] } });
       manager.addLanguage(['en']);
-      manager.addNamedEntityText(
-        'hero',
-        'spiderman',
-        ['en'],
-        ['Spiderman', 'Spider-man']
-      );
-      manager.addNamedEntityText(
-        'hero',
-        'iron man',
-        ['en'],
-        ['iron man', 'iron-man']
-      );
-      manager.addNamedEntityText('hero', 'thor', ['en'], ['Thor']);
-      manager.addNamedEntityText(
-        'food',
-        'burguer',
-        ['en'],
-        ['Burguer', 'Hamburguer']
-      );
-      manager.addNamedEntityText('food', 'pizza', ['en'], ['pizza']);
-      manager.addNamedEntityText(
-        'food',
-        'pasta',
-        ['en'],
-        ['Pasta', 'spaghetti']
-      );
+      addEntities(manager);
       manager.addDocument('en', 'I saw %hero% eating %food%', 'sawhero');
       manager.addDocument(
         'en',
@@ -760,32 +563,7 @@ describe('NLP Manager', () => {
     test('Should search for entities if the language is specified', async () => {
       const manager = new NlpManager({ ner: { builtins: [] } });
       manager.addLanguage(['en']);
-      manager.addNamedEntityText(
-        'hero',
-        'spiderman',
-        ['en'],
-        ['Spiderman', 'Spider-man']
-      );
-      manager.addNamedEntityText(
-        'hero',
-        'iron man',
-        ['en'],
-        ['iron man', 'iron-man']
-      );
-      manager.addNamedEntityText('hero', 'thor', ['en'], ['Thor']);
-      manager.addNamedEntityText(
-        'food',
-        'burguer',
-        ['en'],
-        ['Burguer', 'Hamburguer']
-      );
-      manager.addNamedEntityText('food', 'pizza', ['en'], ['pizza']);
-      manager.addNamedEntityText(
-        'food',
-        'pasta',
-        ['en'],
-        ['Pasta', 'spaghetti']
-      );
+      addEntities(manager);
       manager.addDocument('en', 'I saw %hero% eating %food%', 'sawhero');
       manager.addDocument(
         'en',
@@ -814,12 +592,7 @@ describe('NLP Manager', () => {
     test('Should return None with score 1 if the utterance cannot be classified', async () => {
       const manager = new NlpManager();
       manager.addLanguage(['en']);
-      manager.addDocument('en', 'Hello', 'greet');
-      manager.addDocument('en', 'Good morning', 'greet');
-      manager.addDocument('en', 'Good evening', 'greet');
-      manager.addDocument('en', 'Where are my keys?', 'keys');
-      manager.addDocument('en', "I don't know where my keys are", 'keys');
-      manager.addDocument('en', "I've lost my keys", 'keys');
+      addEn(manager);
       await manager.train();
       const result = await manager.process('This should return none');
       expect(result.intent).toEqual('None');
@@ -1278,12 +1051,7 @@ describe('NLP Manager', () => {
         processTransformer: transformer,
       });
       manager.addLanguage(['en', 'ja']);
-      manager.addDocument('en', 'Hello', 'greet');
-      manager.addDocument('en', 'Good evening', 'greet');
-      manager.addDocument('en', 'Good morning', 'greet');
-      manager.addDocument('en', "I've lost my keys", 'keys');
-      manager.addDocument('en', "I don't find my keys", 'keys');
-      manager.addDocument('en', "I don't know where are my keys", 'keys');
+      addEn(manager);
       await manager.train();
 
       expect(transformer).not.toHaveBeenCalled();
@@ -1422,12 +1190,7 @@ describe('NLP Manager', () => {
       manager.addLanguage(['en', 'ja']);
       manager.assignDomain('greet', 'domain');
       manager.assignDomain('keys', 'domain');
-      manager.addDocument('en', 'Hello', 'greet');
-      manager.addDocument('en', 'Good evening', 'greet');
-      manager.addDocument('en', 'Good morning', 'greet');
-      manager.addDocument('en', "I've lost my keys", 'keys');
-      manager.addDocument('en', "I don't find my keys", 'keys');
-      manager.addDocument('en', "I don't know where are my keys", 'keys');
+      addEn(manager);
       await manager.train();
       const result = await manager.process('where are my keys');
       expect(result.domain).toEqual('domain');
@@ -1746,6 +1509,29 @@ describe('NLP Manager', () => {
           entity: 'entity',
         },
       ]);
+    });
+  });
+
+  describe('Process corpus', () => {
+    test('A corpus can be loaded and processed', async () => {
+      const nlp = new NlpManager();
+      nlp.addCorpus(corpus);
+      await nlp.train();
+      const actual = await nlp.process('who are you?');
+      expect(actual.intent).toEqual('smalltalk.acquaintance');
+    });
+    test('An allow list can be provided', async () => {
+      const nlp = new NlpManager();
+      nlp.addCorpus(corpus);
+      await nlp.train();
+      let actual = await nlp.process('who are your?', undefined, undefined, {
+        allowList: ['smalltalk.boss', 'smalltalk.boring'],
+      });
+      expect(actual.intent).toEqual('smalltalk.boss');
+      actual = await nlp.process('who are your?', undefined, undefined, {
+        allowList: ['support.developers', 'smalltalk.boring'],
+      });
+      expect(actual.intent).toEqual('support.developers');
     });
   });
 });
