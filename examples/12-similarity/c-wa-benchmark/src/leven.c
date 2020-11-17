@@ -23,6 +23,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include "utf8_decode.h"
 
 #define TMP_SIZE 1000
 #define TEST_STRINGS 18
@@ -30,16 +31,57 @@
 
 char array[TMP_SIZE];
 char charCodeCache[TMP_SIZE];
+int leftWide[TMP_SIZE];
+int rightWide[TMP_SIZE];
+
+int *leftW = leftWide;
+int *rightW = rightWide;
 
 int leven(char *left, char *right, int leftLength, int rightLength) {
-  char *tmp;
-  int swp, start, i, j;
+  int *tmp;
+  int swp, start, i, j, c;
   int bCharCode, result, temp, temp2;
+  char done;
+
+  i = 0;
+  done = 0;
+  utf8_decode_init(left, leftLength);
+  while(!done) {
+    c = utf8_decode_next();
+    
+    if (c == UTF8_END || c == UTF8_ERROR) {
+      if (c == UTF8_ERROR) printf("utf8 error");
+      done = 1;
+    } else {
+      printf("left %d %d\n", i, c);
+      leftW[i++] = c;
+    }
+  }
+  // printf("left: %d, %d\n", leftLength, i);
+  leftLength = i;
+
+  i = 0;
+  done = 0;
+  utf8_decode_init(right, rightLength);
+  while(!done) {
+    c = utf8_decode_next();
+    
+    if (c == UTF8_END || c == UTF8_ERROR) {
+      if (c == UTF8_ERROR) printf("utf8 error");
+      done = 1;
+    } else {
+      printf("right %d %d\n", i, c);
+      rightW[i++] = c;
+    }
+  }
+  
+  // printf("right: %d, %d\n", rightLength, i);
+  rightLength = i;
 
   if (leftLength > rightLength) {
-    tmp = right;
-    right = left;
-    left = tmp;
+    tmp = rightW;
+    rightW = leftW;
+    leftW = tmp;
 
     swp = rightLength;
     rightLength = leftLength;
@@ -49,7 +91,7 @@ int leven(char *left, char *right, int leftLength, int rightLength) {
   leftLength--;
   rightLength--;
   
-  while (leftLength > 0 && left[leftLength] == right[rightLength]) {
+  while (leftLength > 0 && leftW[leftLength] == rightW[rightLength]) {
     leftLength--;
     rightLength--;
   }
@@ -58,7 +100,7 @@ int leven(char *left, char *right, int leftLength, int rightLength) {
   rightLength++;
 
   start = 0;
-  while (start < leftLength && left[start] == right[start]) start++;
+  while (start < leftLength && leftW[start] == rightW[start]) start++;
 
   leftLength -= start;
   rightLength -= start;
@@ -66,13 +108,13 @@ int leven(char *left, char *right, int leftLength, int rightLength) {
   if (!leftLength) return rightLength;
 
   for (i = 0; i < leftLength; i++) {
-    charCodeCache[i] = left[start + i];
+    charCodeCache[i] = leftW[start + i];
     array[i] = i + 1;
   }
 
   j = 0;
   while (j < rightLength) {
-    bCharCode = right[start + j];
+    bCharCode = rightW[start + j];
     temp = j;
     j += 1;
     result = j;
@@ -110,8 +152,8 @@ int main() {
     "levenshtein",
     "distance",
     "distance",
-    u8"你好世界",
-    u8"因為我是中國人所以我會說中文",
+    "你好世界",
+    "因為我是中國人所以我會說中文",
     "mikailovitch"
   };
 
@@ -131,8 +173,8 @@ int main() {
     "frankenstein",
     "difference",
     "eistancd",
-    u8"你好",
-    u8"因為我是英國人所以我會說英文",
+    "你好",
+    "因為我是英國人所以我會說英文",
     "Mikhaïlovitch"
   };
 

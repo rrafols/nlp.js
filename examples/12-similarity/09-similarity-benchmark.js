@@ -21,10 +21,11 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-const levenwa = require('../../packages/similarity-wa/src/leven.js');
+const levenwa1 = require('../../packages/similarity-wa/src/leven.js');
+const levenwa2 = require('../../packages/similarity-wa_opt/src/leven.js');
 const levenjs = require('../../packages/similarity/src/leven.js');
 
-const levenAlgs = [levenjs, levenwa];
+const levenAlgs = [levenjs, levenwa1, levenwa2];
 const execTimeWord = [];
 const execTimeLong = [];
 const execTimeVeryLong = [];
@@ -99,19 +100,25 @@ for (let i = 0; i < levenAlgs.length; i += 1) {
 }
 
 console.log(
-  'Web Assembly vs JavaScript benchmark on words:',
+  'WA opt, Web Assembly vs JavaScript benchmark on words:',
+  execTimeWord[2],
+  ' vs ',
   execTimeWord[1],
   ' vs ',
   execTimeWord[0]
 );
 console.log(
-  'Web Assembly vs JavaScript benchmark on long texts:',
+  'WA opt, Web Assembly vs JavaScript benchmark on long texts:',
+  execTimeLong[2],
+  ' vs ',
   execTimeLong[1],
   ' vs ',
   execTimeLong[0]
 );
 console.log(
-  'Web Assembly vs JavaScript benchmark on very long texts:',
+  'WA opt, Web Assembly vs JavaScript benchmark on very long texts:',
+  execTimeVeryLong[2],
+  ' vs ',
   execTimeVeryLong[1],
   ' vs ',
   execTimeVeryLong[0]

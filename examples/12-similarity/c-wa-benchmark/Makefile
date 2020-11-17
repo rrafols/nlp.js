@@ -5,10 +5,10 @@ WACFLAGS=-O2 -s EXPORTED_FUNCTIONS='["_leven"]' -s EXPORTED_RUNTIME_METHODS='["c
 all: leven_test leven.js leven.c.wat
 
 leven_test: src/leven.c
-	$(CC) src/leven.c -o $@
+	$(CC) src/leven.c src/utf8_decode.c -o $@
 
 leven.js: src/leven.c
-	$(WACC) src/leven.c -o $@ $(WACFLAGS)
+	$(WACC) src/leven.c src/utf8_decode.c -o $@ $(WACFLAGS)
 
 leven.c.wat: leven.wasm
 	wasm2wat leven.wasm -o leven.c.wat
